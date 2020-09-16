@@ -11,9 +11,10 @@
 int vet_media1[nmedia];
 int vet_media2[nmedia];
 
-long tempPisca, tempPisca2, temp, temp2, tempbtn;
+long tempPisca, tempPisca2, temp, temp2, tempbtn, tempbtn2;
 int cont = 0;
-bool flag, flag2, flag3, flag4, flagbtn, flagmenu, flag5;
+bool flag, flag2, flag3, flag4, flag5, flagbtn, flagbtn2, flagbtn2_2, flagmenu;
+int nalunos;
 
 byte in[] = {2, 8};                                                        //Pinos de entrada
 byte in_pull[] = {btn, btn2};                                              //Pinos de entrada com pullup
@@ -31,8 +32,7 @@ void num(byte n);
 void setup()
 {
   Serial.begin(9600);
-  //EEPROM.write(0, 5);
-  //Serial.println(EEPROM.read(0));
+  nalunos = EEPROM.read(0);
 
   for (byte i = 0; i < sizeof(in); i++)
     pinMode(in[i], INPUT);
@@ -42,34 +42,72 @@ void setup()
     pinMode(out[i], OUTPUT);
 
   digitalWrite(LED_verde, HIGH);
+
+  num(nalunos);
+  delay(1500);
 }
 
 void loop()
 {
+
+  if (digitalRead(btn2) == LOW && flagbtn2 == LOW)
+  {
+    tempbtn2 = millis();
+    flagbtn2 = HIGH;
+  }
+  if (digitalRead(btn2) && flagbtn2)
+  {
+    flagbtn2 = LOW;
+    flagbtn2_2 = LOW;
+    if((millis() - tempbtn2) < 1500 && flagmenu == LOW && cont != 0) 
+    {
+      cont--;
+      digitalWrite(LED_verde, HIGH);
+    }
+    if (flagmenu)
+    {
+      nalunos--;
+    }
+  }
+
+  if ((millis() - tempbtn2) > 2000 && flagbtn2 && flagbtn2_2 == LOW)
+  {
+    cont = 0;
+    digitalWrite(LED_verde, HIGH);
+    digitalWrite(LED_VErdemlho, LOW);
+    for (byte i = 0; i < 4; i++)
+    {
+      digitalWrite(LED_verde, !digitalRead(LED_verde));
+      digitalWrite(LED_VErdemlho, !digitalRead(LED_VErdemlho));
+      delay(100);
+    }
+    flagbtn2_2 = HIGH;
+    
+  }
 
   if (digitalRead(btn) == LOW && flagbtn == LOW && (millis() - tempbtn) > 90)
   {
     flagbtn = HIGH;
     tempbtn = millis();
     flag5 = LOW;
-    Serial.println("uai");
   }
 
   if (digitalRead(btn) == HIGH && flagbtn)
   {
     flagbtn = LOW;
 
-    if (flag5 == LOW && (millis() - tempbtn) < 2000)
+    if((millis() - tempbtn) < 1500 && flagmenu == LOW && cont != nalunos) cont++;
+
+    if (flagmenu && flag5 == LOW && (millis() - tempbtn) < 2000)
     {
-      cont = 0;
-      digitalWrite(LED_verde, HIGH);
-      digitalWrite(LED_VErdemlho, LOW);
+      nalunos++;
     }
   }
 
   if ((millis() - tempbtn) > 2000 && flagbtn && flag5 == LOW)
   {
     flagmenu = !flagmenu;
+    EEPROM.write(0, nalunos);
     flag5 = HIGH;
   }
 
@@ -82,6 +120,7 @@ void loop()
     menu();
   }
 }
+
 void menu(void)
 {
 
@@ -91,13 +130,15 @@ void menu(void)
     digitalWrite(LED_verde, !digitalRead(LED_verde));
     tempPisca = millis();
   }
+
+  num(nalunos);
 }
 
 void logica(void)
 {
   num(cont);
 
-  if (cont < 5)
+  if (cont < nalunos)
   {
     entrada();
   }
@@ -139,7 +180,7 @@ void entrada()
     cont++;
     Serial.println(cont);
     digitalWrite(LED_VErdemlho, LOW);
-    if (cont != 5)
+    if (cont != nalunos)
       digitalWrite(LED_verde, HIGH);
     flag = LOW;
     flag3 = HIGH;
@@ -155,7 +196,6 @@ void entrada()
   {
     digitalWrite(LED_VErdemlho, !digitalRead(LED_VErdemlho));
     tempPisca = millis();
-    //Serial.println("psica");
   }
 }
 
@@ -168,7 +208,6 @@ void saida()
       tempPisca2 = millis();
     flag2 = HIGH;
     digitalWrite(LED_verde, LOW);
-    //  digitalWrite(LED_VErdemlho, HIGH);
   }
   else if (dist_1() < 10 && (millis() - temp) < 10000 && flag2 == HIGH && flag == LOW)
   {
@@ -222,15 +261,12 @@ int dist_1()
 
   int val = pulseIn(2, HIGH);
 
-  //Serial.println(val);
-
   for (byte i = 0; i < nmedia - 1; i++)
     vet_media1[i] = vet_media1[i + 1];
   vet_media1[nmedia - 1] = val;
   for (byte i = 0; i < nmedia; i++)
     media += vet_media1[i];
   return (media / nmedia) / 58;
-  //return val/58;
 }
 
 int dist_2()
@@ -243,14 +279,10 @@ int dist_2()
 
   int val = pulseIn(8, HIGH);
 
-  //Serial.println(val);
-
   for (byte i = 0; i < nmedia - 1; i++)
     vet_media2[i] = vet_media2[i + 1];
   vet_media2[nmedia - 1] = val;
   for (byte i = 0; i < nmedia; i++)
     media += vet_media2[i];
   return (media / nmedia) / 58;
-
-  //return val/58;
 }
