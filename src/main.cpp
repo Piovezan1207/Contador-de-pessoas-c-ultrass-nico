@@ -13,7 +13,7 @@ int vet_media2[nmedia];
 
 long tempPisca, tempPisca2, temp, temp2, tempbtn, tempbtn2;
 int cont = 0;
-bool flag, flag2, flag3, flag4, flag5, flagbtn, flagbtn2, flagbtn2_2, flagmenu;
+bool flag, flag2, flag3, flag4, flagbtn, flagbtn_2, flagbtn2, flagbtn2_2, flagmenu;
 int nalunos;
 
 byte in[] = {2, 8};                                                        //Pinos de entrada
@@ -49,24 +49,28 @@ void setup()
 
 void loop()
 {
-
-  if (digitalRead(btn2) == LOW && flagbtn2 == LOW)
+  //Serial.println(dist_1());
+  //Serial.println(dist_2());
+  if (digitalRead(btn2)  && flagbtn2 == LOW && (millis() - tempbtn2) > 90)
   {
     tempbtn2 = millis();
     flagbtn2 = HIGH;
   }
-  if (digitalRead(btn2) && flagbtn2)
+  if (digitalRead(btn2) == LOW && flagbtn2)
   {
     flagbtn2 = LOW;
     flagbtn2_2 = LOW;
-    if((millis() - tempbtn2) < 1500 && flagmenu == LOW && cont != 0) 
+    if ((millis() - tempbtn2) < 1500 && flagmenu == LOW && cont != 0)
     {
       cont--;
       digitalWrite(LED_verde, HIGH);
+      digitalWrite(LED_VErdemlho, LOW);
+      flag = LOW;
+      flag2 = LOW;
     }
     if (flagmenu)
     {
-      nalunos--;
+      if(nalunos != 0)nalunos--;
     }
   }
 
@@ -75,6 +79,8 @@ void loop()
     cont = 0;
     digitalWrite(LED_verde, HIGH);
     digitalWrite(LED_VErdemlho, LOW);
+    flag = LOW;
+    flag2 = LOW;
     for (byte i = 0; i < 4; i++)
     {
       digitalWrite(LED_verde, !digitalRead(LED_verde));
@@ -82,35 +88,50 @@ void loop()
       delay(100);
     }
     flagbtn2_2 = HIGH;
-    
   }
-
-  if (digitalRead(btn) == LOW && flagbtn == LOW && (millis() - tempbtn) > 90)
+  /////////////////////////////////////////////////////////////////////////////
+  if (digitalRead(btn)  && flagbtn == LOW && (millis() - tempbtn) > 90)
   {
     flagbtn = HIGH;
     tempbtn = millis();
-    flag5 = LOW;
+    flagbtn_2 = LOW;
   }
 
-  if (digitalRead(btn) == HIGH && flagbtn)
+  if (digitalRead(btn) == LOW && flagbtn)
   {
     flagbtn = LOW;
 
-    if((millis() - tempbtn) < 1500 && flagmenu == LOW && cont != nalunos) cont++;
-
-    if (flagmenu && flag5 == LOW && (millis() - tempbtn) < 2000)
+    if ((millis() - tempbtn) < 1500 && flagmenu == LOW )
+    {
+      if (cont < nalunos) cont++;
+      flag = LOW;
+      flag2 = LOW;
+      if (cont < nalunos && flagmenu == LOW)
+      {
+        digitalWrite(LED_verde, HIGH);
+        digitalWrite(LED_VErdemlho, LOW);
+      }
+    }
+    if (flagmenu && flagbtn_2 == LOW && (millis() - tempbtn) < 2000)
     {
       nalunos++;
     }
   }
 
-  if ((millis() - tempbtn) > 2000 && flagbtn && flag5 == LOW)
+  if ((millis() - tempbtn) > 2000 && flagbtn && flagbtn_2 == LOW)
   {
     flagmenu = !flagmenu;
+    flag = LOW;
+    flag2 = LOW;
+    if (cont < nalunos && flagmenu == LOW)
+    {
+      digitalWrite(LED_verde, HIGH);
+      digitalWrite(LED_VErdemlho, LOW);
+    }
     EEPROM.write(0, nalunos);
-    flag5 = HIGH;
+    flagbtn_2 = HIGH;
   }
-
+  ////////////////////////////////////////////////////////////////////////////////
   if (flagmenu == LOW)
   {
     logica();
@@ -120,7 +141,7 @@ void loop()
     menu();
   }
 }
-
+////////////////////////////////////////////////////////////////////////////////
 void menu(void)
 {
 
@@ -133,7 +154,7 @@ void menu(void)
 
   num(nalunos);
 }
-
+////////////////////////////////////////////////////////////////////////////////
 void logica(void)
 {
   num(cont);
@@ -150,24 +171,24 @@ void logica(void)
 
   saida();
 
-  if (flag3 == HIGH && dist_2() > 20)
+  if (flag3 == HIGH && dist_2() > 15)
   {
     flag3 = LOW;
     Serial.println("Reset Flag 3");
     delay(1000);
   }
 
-  if (flag4 == HIGH && dist_1() > 20)
+  if (flag4 == HIGH && dist_1() > 15)
   {
     flag4 = LOW;
     Serial.println("Reset Flag 4");
     delay(1000);
   }
 }
-
+////////////////////////////////////////////////////////////////////////////////
 void entrada()
 {
-  if (dist_1() < 10 && flag2 == LOW && flag4 == LOW) //Verifica se o aluno entrou na sala
+  if (dist_1() < 5 && flag2 == LOW && flag4 == LOW) //Verifica se o aluno entrou na sala
   {
     temp = millis();
     if (flag == LOW)
@@ -175,7 +196,7 @@ void entrada()
     flag = HIGH;
     digitalWrite(LED_verde, LOW);
   }
-  else if (dist_2() < 10 && (millis() - temp) < 10000 && flag == HIGH && flag2 == LOW) //Aguarda o aluno passar
+  else if (dist_2() < 5 && (millis() - temp) < 10000 && flag == HIGH && flag2 == LOW) //Aguarda o aluno passar
   {                                                                                    //pelo segundo sensor para confirmar sua entrada
     cont++;
     Serial.println(cont);
@@ -185,11 +206,12 @@ void entrada()
     flag = LOW;
     flag3 = HIGH;
   }
-  else if ((millis() - temp) > 10000 && flag2 == LOW) //Caso o aluno demora x segundos, para passar pelo segundo sensor, o sistema ignora
+  else if ((millis() - temp) > 10000 && flag2 == LOW && flag) //Caso o aluno demora x segundos, para passar pelo segundo sensor, o sistema ignora
   {
     digitalWrite(LED_VErdemlho, LOW);
     digitalWrite(LED_verde, HIGH);
     flag = LOW;
+    Serial.println("timeout entrada");
   }
 
   if (flag && (millis() - tempPisca) > 240 && flag2 == LOW)
@@ -198,10 +220,10 @@ void entrada()
     tempPisca = millis();
   }
 }
-
+////////////////////////////////////////////////////////////////////////////////
 void saida()
 {
-  if (dist_2() < 10 && flag == LOW && flag3 == LOW)
+  if (dist_2() < 5 && flag == LOW && flag3 == LOW)
   {
     temp2 = millis();
     if (flag2 == LOW)
@@ -209,7 +231,7 @@ void saida()
     flag2 = HIGH;
     digitalWrite(LED_verde, LOW);
   }
-  else if (dist_1() < 10 && (millis() - temp) < 10000 && flag2 == HIGH && flag == LOW)
+  else if (dist_1() < 5 && (millis() - temp2) < 10000 && flag2 == HIGH && flag == LOW)
   {
     if (cont != 0)
       cont--;
@@ -219,11 +241,12 @@ void saida()
     flag2 = LOW;
     flag4 = HIGH;
   }
-  else if ((millis() - temp) > 10000 && flag == LOW)
+  else if ((millis() - temp2) > 10000 && flag == LOW && flag2)
   {
     digitalWrite(LED_VErdemlho, LOW);
     digitalWrite(LED_verde, HIGH);
     flag2 = LOW;
+    Serial.println("timeout saida");
   }
 
   if (flag2 && (millis() - tempPisca2) > 240 && flag == LOW)
@@ -232,7 +255,7 @@ void saida()
     tempPisca2 = millis();
   }
 }
-
+////////////////////////////////////////////////////////////////////////////////
 void num(byte n)
 {
   if (n < 10)
@@ -250,7 +273,7 @@ void num(byte n)
     PORTD = (temp.toInt()) << 4;
   }
 }
-
+////////////////////////////////////////////////////////////////////////////////
 int dist_1()
 {
   int media = 0;
@@ -268,7 +291,7 @@ int dist_1()
     media += vet_media1[i];
   return (media / nmedia) / 58;
 }
-
+////////////////////////////////////////////////////////////////////////////////
 int dist_2()
 {
   int media = 0;
